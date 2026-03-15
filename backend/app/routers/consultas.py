@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from .. import models, schemas, database
 from typing import List
 from datetime import timedelta
+from datetime import date, datetime, time # Adicione 'time' e 'date' aos imports
+from sqlalchemy import and_
 
 router = APIRouter(
     prefix="/consultas",
@@ -56,3 +58,22 @@ def deletar_consulta(consulta_id: int, db: Session = Depends(database.get_db)):
     db.commit()
     return {"detail": "Consulta deletada com sucesso"}
 
+# ... outras rotas ...
+
+@router.get("/timeline/{data_escolhida}", response_model=List[schemas.Consulta])
+def buscar_agenda_do_dia(data_escolhida: date, db: Session = Depends(database.get_db)):
+    """
+    Retorna todas as consultas de um dia específico, ordenadas por horário.
+    Formato da data: AAAA-MM-DD (Ex: 2026-03-15)
+    """
+    # Define o início do dia (00:00:00) e o fim do dia (23:59:59)
+    inicio_dia = datetime.combine(data_escolhida, time.min)
+    fim_dia = datetime.combine(data_escolhida, time.max)
+
+    # Busca no banco consultas que iniciam dentro desse intervalo
+    consultas = db.query(models.Consulta).filter(
+        models.Consulta.data_inicio >= inicio_dia,
+        models.Consulta.data_inicio <= fim_dia
+    ).order_by(models.Consulta.data_inicio).all()
+    
+    return consultas
